@@ -1,244 +1,59 @@
-<img width="598" height="664" alt="image" src="https://github.com/user-attachments/assets/1d4fbefa-b003-40ac-9b4b-11cea6b476c5" />
-
 \documentclass[11pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[margin=1in]{geometry}
 \usepackage{hyperref}
-\usepackage{listings}
-\usepackage{xcolor}
 \usepackage{amsmath}
-\usepackage{graphicx}
-\usepackage{booktabs}
+\usepackage{listings}
 
-% Code listing style
-\definecolor{codegreen}{rgb}{0,0.6,0}
-\definecolor{codegray}{rgb}{0.5,0.5,0.5}
-\definecolor{codepurple}{rgb}{0.58,0,0.82}
-\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
-
-\lstdefinestyle{pythonstyle}{
-    backgroundcolor=\color{backcolour},   
-    commentstyle=\color{codegreen},
-    keywordstyle=\color{magenta},
-    numberstyle=\tiny\color{codegray},
-    stringstyle=\color{codepurple},
-    basicstyle=\ttfamily\footnotesize,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,                  
-    showspaces=false,                
-    showstringspaces=false,
-    showtabs=false,                  
-    tabsize=2
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single
 }
-\lstset{style=pythonstyle}
 
-\title{\textbf{Avatar Creation} \\ 
-\large Portrait to Cartoon Avatar Transformation}
-\author{Computer Vision Project}
-\date{\today}
+\title{\textbf{Avatar Creation}}
+\author{Portrait to Cartoon Transformation}
+\date{}
 
 \begin{document}
-
 \maketitle
 
-\begin{abstract}
-Avatar Creation is a lightweight computer vision pipeline that transforms realistic portrait photographs into stylized cartoon avatars using classical image processing techniques. The system leverages K-means clustering for color quantization, adaptive thresholding for edge detection, and bilateral filtering for smoothing—all implemented with OpenCV. No neural networks required, enabling real-time CPU processing.
-\end{abstract}
+\section*{Overview}
+Transform portrait photos into cartoon avatars using OpenCV. Fast, CPU-only, no training required.
 
-\section{Features}
-
+\section*{Features}
 \begin{itemize}
-    \item \textbf{Fast Processing:} 50-100ms per image on CPU
-    \item \textbf{No Training Required:} Pure classical computer vision algorithms
-    \item \textbf{K-means Color Quantization:} Reduces images to 9 distinct colors
-    \item \textbf{Adaptive Edge Detection:} Bold cartoon-style outlines
-    \item \textbf{Bilateral Filtering:} Edge-preserving smoothing
-    \item \textbf{Highly Customizable:} Tunable parameters for different artistic styles
-    \item \textbf{Minimal Dependencies:} Only OpenCV and NumPy
+    \item K-means color quantization (9 colors)
+    \item Adaptive threshold edge detection
+    \item Bilateral filtering for smoothing
+    \item 50-100ms processing time
+    \item No GPU required
 \end{itemize}
 
-\section{Installation}
-
-\subsection{Requirements}
-\begin{itemize}
-    \item Python 3.7+
-    \item OpenCV (cv2)
-    \item NumPy
-\end{itemize}
-
-\subsection{Setup}
-\begin{lstlisting}[language=bash]
+\section*{Installation}
+\begin{lstlisting}
 pip install opencv-python numpy
 \end{lstlisting}
 
-For Google Colab environments:
-\begin{lstlisting}[language=bash]
-pip install opencv-python-headless numpy
-\end{lstlisting}
-
-\section{Usage}
-
-\subsection{Basic Example}
+\section*{Usage}
 \begin{lstlisting}[language=Python]
 import cv2
 import numpy as np
 
-# Load functions
-from avatar_creation import reduce_colors, get_edges
+def reduce_colors(img, k):
+    data = np.float32(img).reshape((-1,3))
+    criteria = (cv2.TERM_CRITERIA_EPS + 
+                cv2.TERM_CRITERIA_MAX_ITER, 20, 0.001)
+    _, _, center = cv2.kmeans(data, k, None, criteria, 
+                              10, cv2.KMEANS_RANDOM_CENTERS)
+    center = np.uint8(center)
+    result = center[_.flatten()].reshape(img.shape)
+    return result
 
-# Load image
-img = cv2.imread("portrait.jpg")
-
-# Extract edges
-line_size = 7
-blur_val = 9
-edges = get_edges(img, line_size, blur_val)
-
-# Reduce colors
-k = 9
-img_colored = reduce_colors(img, k)
-
-# Apply bilateral filter
-blurred = cv2.bilateralFilter(img_colored, 
-                               d=3, 
-                               sigmaColor=200, 
-                               sigmaSpace=200)
-
-# Create cartoon
-cartoon = cv2.bitwise_and(blurred, blurred, mask=edges)
-
-# Save result
-cv2.imwrite("cartoon_avatar.jpg", cartoon)
-\end{lstlisting}
-
-\subsection{Google Colab Integration}
-\begin{lstlisting}[language=Python]
-from google.colab.patches import cv2_imshow
-
-# Display results inline
-cv2_imshow(cartoon)
-\end{lstlisting}
-
-\section{Technical Pipeline}
-
-The transformation follows a four-stage pipeline:
-
-\subsection{Stage 1: Edge Detection}
-
-Converts the input image to grayscale, applies median blur, and extracts edges using adaptive thresholding:
-
-\begin{equation}
-    T(x,y) = \begin{cases}
-        255 & \text{if } I(x,y) > T_{adaptive}(x,y) \\
-        0 & \text{otherwise}
-    \end{cases}
-\end{equation}
-
-where $T_{adaptive}(x,y)$ is computed as the mean of the $\text{line\_size} \times \text{line\_size}$ neighborhood minus $\text{blur\_val}$.
-
-\subsection{Stage 2: Color Quantization}
-
-K-means clustering reduces the color palette to $k$ distinct colors:
-
-\begin{equation}
-    \arg\min_{\mathbf{C}} \sum_{i=1}^{n} \min_{j=1}^{k} ||\mathbf{x}_i - \mathbf{c}_j||^2
-\end{equation}
-
-where $\mathbf{C} = \{\mathbf{c}_1, \ldots, \mathbf{c}_k\}$ are cluster centers.
-
-\subsection{Stage 3: Bilateral Filtering}
-
-Edge-preserving smoothing using bilateral filter:
-
-\begin{equation}
-    I_{\text{filtered}}(x) = \frac{1}{W_p} \sum_{x_i \in \Omega} I(x_i) f_r(||I(x_i) - I(x)||) g_s(||x_i - x||)
-\end{equation}
-
-where $f_r$ is the range kernel and $g_s$ is the spatial kernel.
-
-\subsection{Stage 4: Edge Masking}
-
-Final cartoon generated by applying edge mask to smoothed color image using bitwise AND operation.
-
-\section{Parameters}
-
-\begin{table}[h]
-\centering
-\begin{tabular}{@{}llp{6cm}@{}}
-\toprule
-\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\ \midrule
-\texttt{k} & 9 & Number of color clusters (2-20) \\
-\texttt{line\_size} & 7 & Adaptive threshold block size (must be odd) \\
-\texttt{blur\_val} & 9 & Median blur kernel size (must be odd) \\
-\texttt{d} & 3 & Bilateral filter diameter \\
-\texttt{sigmaColor} & 200 & Color space standard deviation \\
-\texttt{sigmaSpace} & 200 & Coordinate space standard deviation \\ \bottomrule
-\end{tabular}
-\caption{Configurable parameters for avatar generation}
-\end{table}
-
-\subsection{Parameter Tuning Guide}
-
-\begin{itemize}
-    \item \textbf{More cartoon-like:} Decrease $k$ to 3-5, increase \texttt{line\_size} to 9-11
-    \item \textbf{More realistic:} Increase $k$ to 15-20, decrease \texttt{line\_size} to 5-7
-    \item \textbf{Softer edges:} Increase \texttt{blur\_val} to 11-13
-    \item \textbf{Stronger smoothing:} Increase \texttt{sigmaColor} to 250-300
-\end{itemize}
-
-\section{Performance}
-
-\begin{table}[h]
-\centering
-\begin{tabular}{@{}lc@{}}
-\toprule
-\textbf{Metric} & \textbf{Value} \\ \midrule
-Processing Time (CPU) & 50-100 ms \\
-Memory Usage & 10-20 MB \\
-GPU Required & No \\
-Batch Processing & Yes \\
-Input Resolution & Any (tested up to 4K) \\ \bottomrule
-\end{tabular}
-\caption{Performance characteristics}
-\end{table}
-
-\section{Limitations}
-
-\begin{itemize}
-    \item Works best with clear, well-lit portrait photographs
-    \item Complex backgrounds may produce noisy results
-    \item Limited to static images (no video processing)
-    \item Color palette fixed at runtime (not adaptive)
-\end{itemize}
-
-\section{Future Enhancements}
-
-\begin{enumerate}
-    \item Face detection integration for automatic cropping
-    \item Real-time video processing mode
-    \item Interactive parameter adjustment UI
-    \item Batch processing with progress tracking
-    \item Multiple artistic style presets
-    \item Web API deployment
-\end{enumerate}
-
-\section{License}
-
-This project is open-source and available under the MIT License.
-
-\section{Contact \& Contributions}
-
-Contributions are welcome! Please submit issues or pull requests on GitHub.
-
-\vspace{1cm}
-\hrule
-\vspace{0.5cm}
-\noindent
-\textit{Generated: \today}
-
-\end{document}
+def get_edges(img, line_size, blur_val):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray_blur = cv2.medianBlur(gray, blur_val)
+    edges = cv2.adaptiveThreshold(gray_blur, 255,
+        cv2.ADAPTIVE_THRESH_MEAN_C, 
+        cv2.THRESH_BINARY, line_size, blur
 
